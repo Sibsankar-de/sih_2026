@@ -1,0 +1,77 @@
+{
+  "model_name": "velocity_estimator",
+  "version": "1.0.0",
+  "input_features": [
+    "acc_x",
+    "acc_y",
+    "acc_z",
+    "gyro_yaw",
+    "gyro_pitch",
+    "gyro_roll"
+  ],
+  "input_shape": [
+    10,
+    6
+  ],
+  "sampling_rate_hz": 10,
+  "window_length_s": 1.0,
+  "window_length_samples": 10,
+  "window_stride_s": 0.5,
+  "window_stride_samples": 5,
+  "target": "velocity_ms (vehicle forward velocity in m/s)",
+  "normalization": "StandardScaler (zero mean, unit variance)",
+  "model_architecture": "CNN-GRU (Conv1D(32) x2 -> GRU(32, unrolled) -> Dense(32) -> Dense(1))",
+  "n_parameters": 16161,
+  "model_size_kb": 55.0546875,
+  "n_train_windows": 141342,
+  "n_val_windows": 14400,
+  "n_test_windows": 58309,
+  "metrics": {
+    "train": {
+      "mae": 3.9396,
+      "rmse": 5.2686,
+      "r2": 0.6328
+    },
+    "val": {
+      "mae": 4.0252,
+      "rmse": 5.0805,
+      "r2": 0.5672
+    },
+    "test": {
+      "mae": 3.8651,
+      "rmse": 5.0439,
+      "r2": 0.6493,
+      "mae_kmh": 13.91
+    }
+  },
+  "baseline_metrics": {
+    "mean": {
+      "mae": 7.343,
+      "rmse": 8.6226,
+      "r2": -0.025
+    },
+    "ridge_regression": {
+      "mae": 5.7362,
+      "rmse": 6.9864,
+      "r2": 0.3271
+    },
+    "random_forest": {
+      "mae": 4.2176,
+      "rmse": 5.4891,
+      "r2": 0.5846
+    },
+    "simple_cnn": {
+      "mae": 4.0382,
+      "rmse": 5.083,
+      "r2": 0.6438
+    }
+  },
+  "improvement_over_rf_mae_pct": 8.36,
+  "improvement_over_mean_mae_pct": 47.36,
+  "inference_time_ms": 0.008,
+  "export_format": "TFLite (pure TFLite builtins, zero Flex ops dependency)",
+  "loss_function": "MSE",
+  "optimizer": "Adam",
+  "learning_rate": 0.001,
+  "batch_size": 64
+}

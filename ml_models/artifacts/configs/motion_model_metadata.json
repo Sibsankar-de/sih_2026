@@ -1,0 +1,364 @@
+{
+  "model_name": "motion_state_classifier",
+  "version": "1.0.0",
+  "timestamp": "2026-09-11T18:36:10.327412",
+  "task": "classification",
+  "input_features": [
+    "acc_x",
+    "acc_y",
+    "acc_z",
+    "gyro_yaw",
+    "gyro_pitch",
+    "gyro_roll"
+  ],
+  "input_shape": [
+    10,
+    6
+  ],
+  "sampling_rate_hz": 10,
+  "window_length_s": 1.0,
+  "window_stride_s": 0.5,
+  "n_classes": 6,
+  "class_mapping": {
+    "0": "stationary",
+    "1": "moving_straight",
+    "2": "turning_left",
+    "3": "turning_right",
+    "4": "accelerating",
+    "5": "braking"
+  },
+  "labeling_methodology": "Labels derived from vehicle CAN-bus ground truth: stationary (speed < 0.5 m/s), turning (|yaw_rate| > 3.0 deg/s), accelerating (long_accel > 0.05g), braking (long_accel < -0.05g), moving_straight (otherwise).",
+  "normalization": "StandardScaler",
+  "model_architecture": "CNN-GRU (Conv1D(32)x2 -> GRU(32) -> Dense(32) -> Softmax)",
+  "n_parameters": 11558,
+  "model_size_kb": 52.9140625,
+  "n_train_windows": 141292,
+  "n_val_windows": 14390,
+  "n_test_windows": 58297,
+  "metrics": {
+    "cnn_gru": {
+      "accuracy": 0.4942621404188895,
+      "precision": 0.563033988624539,
+      "recall": 0.4942621404188895,
+      "f1": 0.5065717851533046,
+      "confusion_matrix": [
+        [
+          7533,
+          284,
+          208,
+          290,
+          278,
+          261
+        ],
+        [
+          2688,
+          14145,
+          2370,
+          1625,
+          5952,
+          1077
+        ],
+        [
+          695,
+          575,
+          2419,
+          750,
+          993,
+          315
+        ],
+        [
+          706,
+          499,
+          745,
+          2235,
+          750,
+          268
+        ],
+        [
+          724,
+          1590,
+          708,
+          482,
+          1678,
+          405
+        ],
+        [
+          1105,
+          1011,
+          627,
+          576,
+          926,
+          804
+        ]
+      ],
+      "report": {
+        "stationary": {
+          "precision": 0.5600327113225783,
+          "recall": 0.8508018974474814,
+          "f1-score": 0.6754539340954943,
+          "support": 8854.0
+        },
+        "moving_straight": {
+          "precision": 0.7813190455148034,
+          "recall": 0.5077718347273575,
+          "f1-score": 0.6155218554861731,
+          "support": 27857.0
+        },
+        "turning_left": {
+          "precision": 0.34181150204889077,
+          "recall": 0.420915260135723,
+          "f1-score": 0.3772613849033063,
+          "support": 5747.0
+        },
+        "turning_right": {
+          "precision": 0.37512588116817724,
+          "recall": 0.4295598693061695,
+          "f1-score": 0.4005017471552728,
+          "support": 5203.0
+        },
+        "accelerating": {
+          "precision": 0.1586461189373168,
+          "recall": 0.3003400751745123,
+          "f1-score": 0.20762187577332344,
+          "support": 5587.0
+        },
+        "braking": {
+          "precision": 0.2568690095846645,
+          "recall": 0.1592394533571004,
+          "f1-score": 0.19660105147328524,
+          "support": 5049.0
+        },
+        "accuracy": 0.4942621404188895,
+        "macro avg": {
+          "precision": 0.4123007114294052,
+          "recall": 0.4447713983580573,
+          "f1-score": 0.4121603081478092,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.563033988624539,
+          "recall": 0.4942621404188895,
+          "f1-score": 0.5065717851533046,
+          "support": 58297.0
+        }
+      }
+    },
+    "random_forest": {
+      "accuracy": 0.5270768650187831,
+      "precision": 0.50178200466243,
+      "recall": 0.5270768650187831,
+      "f1": 0.5005280575652963,
+      "confusion_matrix": [
+        [
+          5624,
+          2513,
+          189,
+          292,
+          94,
+          142
+        ],
+        [
+          534,
+          20209,
+          2965,
+          2764,
+          1007,
+          378
+        ],
+        [
+          184,
+          2519,
+          2041,
+          713,
+          139,
+          151
+        ],
+        [
+          168,
+          2145,
+          590,
+          2089,
+          95,
+          116
+        ],
+        [
+          139,
+          3979,
+          524,
+          482,
+          334,
+          129
+        ],
+        [
+          652,
+          2756,
+          490,
+          560,
+          161,
+          430
+        ]
+      ],
+      "report": {
+        "stationary": {
+          "precision": 0.7703054376112861,
+          "recall": 0.6351931330472103,
+          "f1-score": 0.6962550294026617,
+          "support": 8854.0
+        },
+        "moving_straight": {
+          "precision": 0.592274552328478,
+          "recall": 0.7254550023333453,
+          "f1-score": 0.6521346284165349,
+          "support": 27857.0
+        },
+        "turning_left": {
+          "precision": 0.30019120458891013,
+          "recall": 0.3551418131198886,
+          "f1-score": 0.3253626653913598,
+          "support": 5747.0
+        },
+        "turning_right": {
+          "precision": 0.3027536231884058,
+          "recall": 0.4014991351143571,
+          "f1-score": 0.3452036685119392,
+          "support": 5203.0
+        },
+        "accelerating": {
+          "precision": 0.1825136612021858,
+          "recall": 0.05978163594057634,
+          "f1-score": 0.09006336793851961,
+          "support": 5587.0
+        },
+        "braking": {
+          "precision": 0.31946508172362553,
+          "recall": 0.08516537928302634,
+          "f1-score": 0.1344800625488663,
+          "support": 5049.0
+        },
+        "accuracy": 0.5270768650187831,
+        "macro avg": {
+          "precision": 0.4112505934404818,
+          "recall": 0.37703934980640064,
+          "f1-score": 0.37391657036831355,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.50178200466243,
+          "recall": 0.5270768650187831,
+          "f1-score": 0.5005280575652963,
+          "support": 58297.0
+        }
+      }
+    },
+    "rule_based": {
+      "accuracy": 0.5084824261968883,
+      "precision": 0.40447662536815127,
+      "recall": 0.5084824261968883,
+      "f1": 0.44876700485639737,
+      "confusion_matrix": [
+        [
+          6966,
+          1666,
+          89,
+          133,
+          0,
+          0
+        ],
+        [
+          874,
+          20992,
+          2921,
+          3070,
+          0,
+          0
+        ],
+        [
+          232,
+          4189,
+          789,
+          537,
+          0,
+          0
+        ],
+        [
+          187,
+          3661,
+          459,
+          896,
+          0,
+          0
+        ],
+        [
+          242,
+          4336,
+          509,
+          500,
+          0,
+          0
+        ],
+        [
+          958,
+          3269,
+          410,
+          412,
+          0,
+          0
+        ]
+      ],
+      "report": {
+        "stationary": {
+          "precision": 0.736441484300666,
+          "recall": 0.7867630449514343,
+          "f1-score": 0.7607710369682739,
+          "support": 8854.0
+        },
+        "moving_straight": {
+          "precision": 0.5507831973342429,
+          "recall": 0.7535628387837886,
+          "f1-score": 0.6364104896164924,
+          "support": 27857.0
+        },
+        "turning_left": {
+          "precision": 0.15240486768398687,
+          "recall": 0.1372890203584479,
+          "f1-score": 0.14445258147198828,
+          "support": 5747.0
+        },
+        "turning_right": {
+          "precision": 0.16149963950973323,
+          "recall": 0.17220834134153373,
+          "f1-score": 0.16668216910054878,
+          "support": 5203.0
+        },
+        "accelerating": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 5587.0
+        },
+        "braking": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 5049.0
+        },
+        "accuracy": 0.5084824261968883,
+        "macro avg": {
+          "precision": 0.2668548648047715,
+          "recall": 0.30830387423920075,
+          "f1-score": 0.28471937952621723,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.40447662536815127,
+          "recall": 0.5084824261968883,
+          "f1-score": 0.44876700485639737,
+          "support": 58297.0
+        }
+      }
+    }
+  },
+  "training_time_s": 154.40145683288574,
+  "inference_time_ms": 0.017800119967432693,
+  "export_format": "TFLite"
+}

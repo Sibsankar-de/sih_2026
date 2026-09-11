@@ -1,0 +1,213 @@
+{
+  "model_name": "vibration_classifier",
+  "version": "1.0.0",
+  "timestamp": "2026-09-11T18:33:07.260068",
+  "task": "classification",
+  "input_features": [
+    "acc_x",
+    "acc_y",
+    "acc_z",
+    "gyro_yaw",
+    "gyro_pitch",
+    "gyro_roll"
+  ],
+  "input_shape": [
+    10,
+    6
+  ],
+  "sampling_rate_hz": 10,
+  "window_length_s": 1.0,
+  "window_stride_s": 0.5,
+  "n_classes": 3,
+  "class_mapping": {
+    "0": "smooth",
+    "1": "moderate",
+    "2": "high_vibration"
+  },
+  "labeling_methodology": "Proxy labels derived from IMU signal analysis. Linear acceleration RMS and peak jerk are used to classify vibration intensity. Smooth: RMS < 1.5 m/s\u00b2, Moderate: 1.5 <= RMS < 3.0, High: RMS >= 3.0 or peak_jerk > 15 m/s\u00b3.",
+  "thresholds": {
+    "smooth_rms": 1.5,
+    "moderate_rms": 3.0,
+    "shock_jerk": 15.0
+  },
+  "normalization": "StandardScaler",
+  "model_architecture": "1D-CNN (Conv1D(32) -> Conv1D(64) -> GAP -> Dense(32) -> Softmax)",
+  "n_parameters": 9379,
+  "model_size_kb": 20.4921875,
+  "n_train_windows": 141292,
+  "n_val_windows": 14390,
+  "n_test_windows": 58297,
+  "metrics": {
+    "cnn": {
+      "accuracy": 0.97059883012848,
+      "precision": 0.9710695410085715,
+      "recall": 0.97059883012848,
+      "f1": 0.9706626464964854,
+      "confusion_matrix": [
+        [
+          24174,
+          962,
+          0
+        ],
+        [
+          206,
+          25061,
+          323
+        ],
+        [
+          0,
+          223,
+          7348
+        ]
+      ],
+      "report": {
+        "smooth": {
+          "precision": 0.9915504511894996,
+          "recall": 0.9617281985996181,
+          "f1-score": 0.9764116649163906,
+          "support": 25136.0
+        },
+        "moderate": {
+          "precision": 0.9548502628972034,
+          "recall": 0.9793278624462681,
+          "f1-score": 0.9669341770198318,
+          "support": 25590.0
+        },
+        "high_vibration": {
+          "precision": 0.9578933646199974,
+          "recall": 0.9705455025756174,
+          "f1-score": 0.9641779294055898,
+          "support": 7571.0
+        },
+        "accuracy": 0.97059883012848,
+        "macro avg": {
+          "precision": 0.9680980262355668,
+          "recall": 0.9705338545405012,
+          "f1-score": 0.9691745904472707,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.9710695410085715,
+          "recall": 0.97059883012848,
+          "f1-score": 0.9706626464964854,
+          "support": 58297.0
+        }
+      }
+    },
+    "random_forest": {
+      "accuracy": 0.9769456404274662,
+      "precision": 0.9770269869617902,
+      "recall": 0.9769456404274662,
+      "f1": 0.9769354161652614,
+      "confusion_matrix": [
+        [
+          24700,
+          436,
+          0
+        ],
+        [
+          247,
+          25110,
+          233
+        ],
+        [
+          0,
+          428,
+          7143
+        ]
+      ],
+      "report": {
+        "smooth": {
+          "precision": 0.9900990099009901,
+          "recall": 0.9826543602800764,
+          "f1-score": 0.9863626380208853,
+          "support": 25136.0
+        },
+        "moderate": {
+          "precision": 0.9667359667359667,
+          "recall": 0.981242672919109,
+          "f1-score": 0.9739353037002559,
+          "support": 25590.0
+        },
+        "high_vibration": {
+          "precision": 0.9684110629067245,
+          "recall": 0.9434684982168802,
+          "f1-score": 0.9557770790125109,
+          "support": 7571.0
+        },
+        "accuracy": 0.9769456404274662,
+        "macro avg": {
+          "precision": 0.9750820131812271,
+          "recall": 0.9691218438053552,
+          "f1-score": 0.9720250069112174,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.9770269869617902,
+          "recall": 0.9769456404274662,
+          "f1-score": 0.9769354161652614,
+          "support": 58297.0
+        }
+      }
+    },
+    "rule_based": {
+      "accuracy": 0.6523491774876924,
+      "precision": 0.6916316968149107,
+      "recall": 0.6523491774876924,
+      "f1": 0.6138849614253472,
+      "confusion_matrix": [
+        [
+          25129,
+          7,
+          0
+        ],
+        [
+          14465,
+          11119,
+          6
+        ],
+        [
+          0,
+          5789,
+          1782
+        ]
+      ],
+      "report": {
+        "smooth": {
+          "precision": 0.6346668687174825,
+          "recall": 0.999721514958625,
+          "f1-score": 0.7764251506256759,
+          "support": 25136.0
+        },
+        "moderate": {
+          "precision": 0.6573455512858409,
+          "recall": 0.43450566627588905,
+          "f1-score": 0.5231855075873426,
+          "support": 25590.0
+        },
+        "high_vibration": {
+          "precision": 0.9966442953020134,
+          "recall": 0.23537181349887729,
+          "f1-score": 0.38080991558927235,
+          "support": 7571.0
+        },
+        "accuracy": 0.6523491774876924,
+        "macro avg": {
+          "precision": 0.7628855717684456,
+          "recall": 0.5565329982444638,
+          "f1-score": 0.5601401912674303,
+          "support": 58297.0
+        },
+        "weighted avg": {
+          "precision": 0.6916316968149107,
+          "recall": 0.6523491774876924,
+          "f1-score": 0.6138849614253472,
+          "support": 58297.0
+        }
+      }
+    }
+  },
+  "training_time_s": 216.368994474411,
+  "inference_time_ms": 0.002986370000144234,
+  "export_format": "TFLite"
+}
