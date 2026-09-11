@@ -8,13 +8,8 @@ import 'core/services/mock_ai_service.dart';
 import 'core/services/navigation_service.dart';
 import 'core/services/sensor_service.dart';
 import 'core/theme/app_theme.dart';
-import 'features/ai_speed/ai_speed_screen.dart';
-import 'features/architecture_view/system_architecture_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
 import 'features/fusion_demo/fusion_screen.dart';
 import 'features/navigation/navigation_screen.dart';
-import 'features/research/research_screen.dart';
-import 'features/sensors/sensor_monitoring_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/simulation/simulation_center_screen.dart';
 import 'features/splash/splash_screen.dart';
@@ -49,35 +44,31 @@ class _FineLineAppState extends State<FineLineApp> {
       ),
       GoRoute(
         path: '/',
-        builder: (context, state) => const DashboardScreen(),
+        builder: (context, state) => const NavigationScreen(),
       ),
       GoRoute(
         path: '/navigation',
         builder: (context, state) => const NavigationScreen(),
       ),
       GoRoute(
-        path: '/sensors',
-        builder: (context, state) => const SensorMonitoringScreen(),
-      ),
-      GoRoute(
-        path: '/ai-speed',
-        builder: (context, state) => const AISpeedScreen(),
+        path: '/telemetry',
+        builder: (context, state) => const FusionScreen(),
       ),
       GoRoute(
         path: '/fusion',
         builder: (context, state) => const FusionScreen(),
       ),
       GoRoute(
+        path: '/ai-speed',
+        builder: (context, state) => const FusionScreen(),
+      ),
+      GoRoute(
+        path: '/sensors',
+        builder: (context, state) => const FusionScreen(),
+      ),
+      GoRoute(
         path: '/simulation',
         builder: (context, state) => const SimulationCenterScreen(),
-      ),
-      GoRoute(
-        path: '/architecture',
-        builder: (context, state) => const SystemArchitectureScreen(),
-      ),
-      GoRoute(
-        path: '/research',
-        builder: (context, state) => const ResearchScreen(),
       ),
       GoRoute(
         path: '/settings',
@@ -109,7 +100,7 @@ class _FineLineAppState extends State<FineLineApp> {
         ),
       ],
       child: MaterialApp.router(
-        title: 'FineLine Navigator',
+        title: 'Fine Line',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

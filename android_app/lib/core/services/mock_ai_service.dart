@@ -1,54 +1,49 @@
 import 'dart:math' as math;
 import '../../models/sensor_data.dart';
 import '../../models/speed_estimate.dart';
+import '../ai/ai_inference_engine.dart';
 import 'service_interfaces.dart';
 
+/// Real Edge AI Service executing CNN-GRU Velocity Estimator,
+/// 1D-CNN Vibration Classifier, and Motion State Classifier.
 class MockAIService implements IMockAIService {
-  double _filteredAccel = 0.0;
-  final double _filterAlpha = 0.25;
-  final math.Random _random = math.Random();
+  final AIInferenceEngine _inferenceEngine = AIInferenceEngine();
+
+  @override
+  AIInferenceEngine get inferenceEngine => _inferenceEngine;
+
+  MockAIService() {
+    _inferenceEngine.loadModels();
+  }
 
   @override
   SpeedEstimate estimateSpeed(SensorSnapshot sensorSnapshot, double previousSpeed) {
-    final double rawForwardAccel = sensorSnapshot.accelerometer.y;
-
-    // Apply low-pass exponential moving average filter
-    _filteredAccel = _filterAlpha * rawForwardAccel + (1 - _filterAlpha) * _filteredAccel;
-
-    final bool isZupt = detectZeroVelocity(
-      sensorSnapshot.accelerometer,
-      sensorSnapshot.gyroscope,
+    // Forward IMU sample into the 10-step neural inference window
+    final result = _inferenceEngine.processSample(
+      accX: sensorSnapshot.accelerometer.x,
+      accY: sensorSnapshot.accelerometer.y,
+      accZ: sensorSnapshot.accelerometer.z,
+      gyroYaw: sensorSnapshot.gyroscope.z,
+      gyroPitch: sensorSnapshot.gyroscope.y,
+      gyroRoll: sensorSnapshot.gyroscope.x,
+      previousSpeedMs: previousSpeed,
     );
 
-    double speedPrediction;
-    double confidence;
-
-    if (isZupt) {
-      speedPrediction = 0.0;
-      confidence = 0.99;
-    } else {
-      // Mock Deep Learning Inference (LSTM/TCN model estimating instantaneous velocity)
-      // Base forward motion modulated with filtered acceleration and micro-variations
-      final double accelDelta = _filteredAccel * 0.1; // dt = 0.1s
-      final double rawCandidate = (previousSpeed + accelDelta).clamp(0.0, 35.0);
-
-      // Model regularizes drift that standard double integration suffers from
-      final double modelCorrection = (_random.nextDouble() - 0.5) * 0.04;
-      speedPrediction = (rawCandidate + modelCorrection).clamp(0.0, 35.0);
-
-      // Confidence depends on sensor vibration magnitude
-      final double vibration = (sensorSnapshot.accelerometer.x.abs() + sensorSnapshot.gyroscope.z.abs());
-      confidence = (0.96 - (vibration * 0.08)).clamp(0.70, 0.99);
-    }
-
     return SpeedEstimate(
-      timestamp: DateTime.now(),
-      rawAcceleration: rawForwardAccel,
-      filteredAcceleration: _filteredAccel,
-      predictedSpeedMs: speedPrediction,
-      confidenceScore: confidence,
-      isZuptActive: isZupt,
-      modelName: 'FineLine-TCN-v2 (Quantized TFLite)',
+      timestamp: result.timestamp,
+      rawAcceleration: result.rawForwardAccel,
+      filteredAcceleration: result.filteredForwardAccel,
+      predictedSpeedMs: result.predictedSpeedMs,
+      predictedSpeedKmh: result.predictedSpeedKmh,
+      confidenceScore: result.speedConfidence,
+      isZuptActive: result.isZuptDetected,
+      modelName: 'FineLine CNN-GRU + 1D-CNN (Edge TFLite)',
+      vibrationClass: result.vibrationClass,
+      vibrationNoiseScore: result.vibrationNoiseScore,
+      vibrationProbabilities: result.vibrationProbabilities,
+      motionState: result.motionState,
+      motionStateIndex: result.motionStateIndex,
+      motionProbabilities: result.motionProbabilities,
     );
   }
 
@@ -62,10 +57,6 @@ class MockAIService implements IMockAIService {
 
   @override
   bool detectZeroVelocity(Vector3D accel, Vector3D gyro) {
-    // Zero Velocity Update (ZUPT) trigger
-    final double accelDev = (accel.x.abs() + (accel.z - 9.806).abs());
-    final double gyroMagnitude = (gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z);
-
-    return accelDev < 0.02 && gyroMagnitude < 0.0001;
+    return _inferenceEngine.latestResult.isZuptDetected;
   }
 }

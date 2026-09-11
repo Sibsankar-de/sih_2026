@@ -43,42 +43,35 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _getColor();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.28), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 7,
-            height: 7,
+            width: 6,
+            height: 6,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.6),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                ),
-              ],
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
+            Icon(icon, size: 11, color: color),
             const SizedBox(width: 4),
           ],
           Text(
             '$label: ${_getText()}',
             style: TextStyle(
               color: color,
-              fontSize: 11,
+              fontSize: 10.5,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+              letterSpacing: 0.2,
             ),
           ),
         ],

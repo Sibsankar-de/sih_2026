@@ -1,16 +1,20 @@
 import 'dart:async';
-import 'dart:math' as math;
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'service_interfaces.dart';
 
 class LocationService implements ILocationService {
   final StreamController<LatLng> _gnssStreamController = StreamController<LatLng>.broadcast();
-  LatLng _currentPosition = const LatLng(28.6139, 77.2090);
+  StreamSubscription<Position>? _positionSub;
+
+  LatLng _currentPosition = const LatLng(28.6139, 77.2090); // Default fallback
   bool _isGnssAvailable = true;
-  double _gnssAccuracyMeters = 1.8;
-  int _satelliteCount = 16;
-  double _hdop = 0.75;
-  final math.Random _random = math.Random();
+  double _gnssAccuracyMeters = 2.0;
+  int _satelliteCount = 14;
+  double _hdop = 0.8;
+  bool _hasRealLocationFix = false;
+
+  bool get hasRealLocationFix => _hasRealLocationFix;
 
   @override
   Stream<LatLng> get gnssStream => _gnssStreamController.stream;
@@ -30,6 +34,48 @@ class LocationService implements ILocationService {
   @override
   double get hdop => _hdop;
 
+  LocationService() {
+    _initRealLocation();
+  }
+
+  Future<void> _initRealLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      _hasRealLocationFix = true;
+      _currentPosition = LatLng(pos.latitude, pos.longitude);
+      _gnssAccuracyMeters = pos.accuracy;
+      _gnssStreamController.add(_currentPosition);
+
+      _positionSub = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 1,
+        ),
+      ).listen((pos) {
+        if (_isGnssAvailable) {
+          _hasRealLocationFix = true;
+          _currentPosition = LatLng(pos.latitude, pos.longitude);
+          _gnssAccuracyMeters = pos.accuracy;
+          _gnssStreamController.add(_currentPosition);
+        }
+      });
+    } catch (_) {
+      // Fallback cleanly to default position
+    }
+  }
+
   @override
   void simulateGnssLoss() {
     _isGnssAvailable = false;
@@ -41,9 +87,9 @@ class LocationService implements ILocationService {
   @override
   void restoreGnss() {
     _isGnssAvailable = true;
-    _satelliteCount = 14 + _random.nextInt(6);
-    _hdop = 0.8 + _random.nextDouble() * 0.4;
-    _gnssAccuracyMeters = 1.6 + _random.nextDouble() * 0.8;
+    _satelliteCount = 14;
+    _hdop = 0.8;
+    _gnssAccuracyMeters = 1.8;
   }
 
   @override
@@ -56,6 +102,7 @@ class LocationService implements ILocationService {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
     _gnssStreamController.close();
   }
 }

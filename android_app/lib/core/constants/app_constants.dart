@@ -1,13 +1,11 @@
 class AppConstants {
-  static const String appName = 'FineLine Navigator';
+  static const String appName = 'Fine Line';
   static const String appSubtitle = 'Intelligent Dead Reckoning Navigation';
-  static const String sihProblemCode = 'SIH26168';
-  static const String sihProblemTitle = 'AI-ML Based Intelligent Dead Reckoning System for Seamless Navigation';
-  static const String appVersion = 'v1.0.0 (SIH 2026 Edition)';
+  static const String appVersion = 'v1.0.0';
 
   // OpenStreetMap Tile URL
   static const String osmTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-  static const String mapPackageUserAgent = 'com.sih2026.fineline_navigator';
+  static const String mapPackageUserAgent = 'com.fineline.navigator';
 
   // Navigation & Refresh Rates
   static const int sensorSamplingRateMs = 50; // 20 Hz

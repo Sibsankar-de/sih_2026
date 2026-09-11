@@ -7,7 +7,6 @@ import '../../models/navigation_state.dart';
 import '../../models/sensor_data.dart';
 import '../../models/simulation_scenario.dart';
 import '../../models/speed_estimate.dart';
-import '../constants/mock_routes.dart';
 import '../utils/geo_utils.dart';
 import 'fusion_service.dart';
 import 'location_service.dart';
@@ -15,6 +14,7 @@ import 'map_matching_service.dart';
 import 'mock_ai_service.dart';
 import 'sensor_service.dart';
 import 'service_interfaces.dart';
+import '../fusion/fusion_types.dart';
 
 class NavigationService extends ChangeNotifier implements INavigationService {
   final ISensorService sensorService;
@@ -30,17 +30,18 @@ class NavigationService extends ChangeNotifier implements INavigationService {
 
   Timer? _navigationTimer;
   StreamSubscription<SensorSnapshot>? _sensorSubscription;
+  StreamSubscription<LatLng>? _locationSubscription;
 
-  // Trajectory history buffers for charts and visualizers
+  // Telemetry history buffers
   final List<double> _speedHistory = [];
   final List<double> _confidenceHistory = [];
   final List<double> _driftHistory = [];
   final List<double> _gnssErrorHistory = [];
   final List<double> _fusedErrorHistory = [];
 
-  // Active scenario
+  // Active scenario (used when simulation is launched)
   SimulationScenario _currentScenario = SimulationScenario.getAllScenarios().first;
-  double _routeProgress = 0.0; // 0.0 to length of route
+  double _routeProgress = 0.0;
   final math.Random _random = math.Random();
 
   NavigationState get state => _state;
@@ -66,14 +67,27 @@ class NavigationService extends ChangeNotifier implements INavigationService {
         aiService = aiService ?? MockAIService(),
         fusionService = fusionService ?? FusionService(),
         mapMatchingService = mapMatchingService ?? MapMatchingService() {
-    final initialRoute = MockRoutes.standardCityRoute;
-    _state = NavigationState.initial(initialRoute);
+    final initialPos = this.locationService.currentGnssPosition;
+    _state = NavigationState.initial().copyWith(
+      currentPosition: initialPos,
+      gnssPosition: initialPos,
+      insPosition: initialPos,
+      snappedPosition: initialPos,
+      isSimulationActive: false,
+    );
+
     _latestSpeedEstimate = SpeedEstimate.initial();
-    _latestFusionSnapshot = FusionSnapshot.initial(initialRoute.first);
+    _latestFusionSnapshot = FusionSnapshot.initial(initialPos);
     _latestSensorSnapshot = SensorSnapshot.initial();
 
     _sensorSubscription = this.sensorService.sensorStream.listen((snapshot) {
       _latestSensorSnapshot = snapshot;
+    });
+
+    _locationSubscription = this.locationService.gnssStream.listen((pos) {
+      if (!_state.isSimulationActive) {
+        _onLiveLocationUpdate(pos);
+      }
     });
 
     _startNavigationLoop();
@@ -82,83 +96,190 @@ class NavigationService extends ChangeNotifier implements INavigationService {
   void _startNavigationLoop() {
     _navigationTimer?.cancel();
     _navigationTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_state.isSimulationActive) return;
       _tickNavigation(0.1);
     });
   }
 
+  void _onLiveLocationUpdate(LatLng realPos) {
+    final double dist = GeoUtils.calculateDistance(_state.currentPosition, realPos);
+    double liveSpeed = dist / 1.0; // approximate m/s
+    if (dist < 0.5) liveSpeed = 0.0;
+
+    final imuSample = IMUSample(
+      timestamp: DateTime.now().millisecondsSinceEpoch / 1000.0,
+      accelX: _latestSensorSnapshot.accelerometer.y,
+      accelY: _latestSensorSnapshot.accelerometer.x,
+      gyroZ: _latestSensorSnapshot.gyroscope.z,
+    );
+
+    _latestFusionSnapshot = fusionService.computeFusion(
+      gnssPosition: realPos,
+      deadReckonedPosition: realPos,
+      isGnssValid: true,
+      insDriftMeters: 0.0,
+      gnssAccuracy: locationService.gnssAccuracyMeters,
+      dt: 0.1,
+      imuSample: imuSample,
+      aiForwardSpeedMs: liveSpeed,
+      aiConfidence: _latestSpeedEstimate.confidenceScore,
+      vibrationScore: _latestSpeedEstimate.vibrationNoiseScore,
+    );
+
+    final updatedHistory = List<LatLng>.from(_state.historicalTrail);
+    if (updatedHistory.length > 100) updatedHistory.removeAt(0);
+    updatedHistory.add(realPos);
+
+    _state = _state.copyWith(
+      currentPosition: realPos,
+      gnssPosition: realPos,
+      insPosition: realPos,
+      snappedPosition: realPos,
+      currentSpeedMs: liveSpeed,
+      driftEstimateMeters: 0.0,
+      positionAccuracyMeters: locationService.gnssAccuracyMeters,
+      navMode: NavMode.fusedEkf,
+      gnssHealth: SignalHealth.excellent,
+      insHealth: SignalHealth.excellent,
+      fusionHealth: SignalHealth.excellent,
+      historicalTrail: updatedHistory,
+    );
+
+    notifyListeners();
+  }
+
   void _tickNavigation(double dt) {
-    // 1. AI Speed Estimation from sensor stream
+    // 1. Run AI speed & motion inference from streaming IMU
     _latestSpeedEstimate = aiService.estimateSpeed(
       _latestSensorSnapshot,
       _state.currentSpeedMs,
     );
 
-    // 2. Advance route progression
+    // If in Live Mode (not in simulation):
+    if (!_state.isSimulationActive) {
+      final imuSample = IMUSample(
+        timestamp: DateTime.now().millisecondsSinceEpoch / 1000.0,
+        accelX: _latestSensorSnapshot.accelerometer.y,
+        accelY: _latestSensorSnapshot.accelerometer.x,
+        gyroZ: _latestSensorSnapshot.gyroscope.z,
+      );
+
+      _latestFusionSnapshot = fusionService.computeFusion(
+        gnssPosition: _state.gnssPosition,
+        deadReckonedPosition: _state.currentPosition,
+        isGnssValid: !_state.isGnssOutageSimulated,
+        insDriftMeters: _state.isGnssOutageSimulated ? 0.15 : 0.0,
+        gnssAccuracy: locationService.gnssAccuracyMeters,
+        dt: dt,
+        imuSample: imuSample,
+        aiForwardSpeedMs: _latestSpeedEstimate.predictedSpeedMs,
+        aiConfidence: _latestSpeedEstimate.confidenceScore,
+        vibrationScore: _latestSpeedEstimate.vibrationNoiseScore,
+      );
+
+      _updateTelemetryBuffers(
+        _state.currentSpeedMs,
+        _latestSpeedEstimate.confidenceScore,
+        _latestFusionSnapshot,
+      );
+
+      if (_state.isGnssOutageSimulated) {
+        final updatedHistory = List<LatLng>.from(_state.historicalTrail);
+        if (updatedHistory.length > 100) updatedHistory.removeAt(0);
+        updatedHistory.add(_latestFusionSnapshot.fusedPosition);
+
+        _state = _state.copyWith(
+          currentPosition: _latestFusionSnapshot.fusedPosition,
+          insPosition: _latestFusionSnapshot.fusedPosition,
+          driftEstimateMeters: _latestFusionSnapshot.estimatedDriftMeters,
+          navMode: _latestFusionSnapshot.activeMode,
+          positionAccuracyMeters: _latestFusionSnapshot.estimatedDriftMeters + 1.5,
+          gnssHealth: SignalHealth.lost,
+          historicalTrail: updatedHistory,
+        );
+      } else {
+        _state = _state.copyWith(
+          driftEstimateMeters: _latestFusionSnapshot.estimatedDriftMeters,
+          navMode: _latestFusionSnapshot.activeMode,
+          positionAccuracyMeters: 1.8,
+          gnssHealth: SignalHealth.excellent,
+        );
+      }
+
+      notifyListeners();
+      return;
+    }
+
+    // --- SIMULATION MODE ---
     final List<LatLng> route = _state.activeRoute;
     if (route.length < 2) return;
 
-    final double speedMs = _latestSpeedEstimate.predictedSpeedMs;
-    final double stepDistMeters = speedMs * dt;
+    // Simulation target speed (~45 km/h = 12.5 m/s)
+    const double simSpeedMs = 12.5;
+    final double stepDistMeters = simSpeedMs * dt;
 
-    // Calculate position along polyline
+    // Advance along route polyline
     final LatLng nextGroundTruth = _advanceAlongPolyline(route, stepDistMeters);
     final double targetBearing = mapMatchingService.calculateRouteBearing(nextGroundTruth, route);
 
-    // Calculate heading update
-    final double integratedHeading = aiService.estimateHeadingCorrection(
-      _latestSensorSnapshot.gyroscope,
-      _state.currentHeadingDeg,
-      dt,
-    );
-    final double blendedHeading = 0.8 * targetBearing + 0.2 * integratedHeading;
+    // Automatic Tunnel / Outage Detection inside simulation:
+    // If route progress is between 25% and 75% of route, tunnel has GNSS blackout!
+    final double totalRouteDistance = _calculateRouteDistance(route);
+    final double progressFraction = totalRouteDistance > 0 ? (_routeProgress / totalRouteDistance).clamp(0.0, 1.0) : 0.0;
+    final bool isInSimulatedOutageZone = _currentScenario.type == ScenarioType.tunnelNavigation
+        ? (progressFraction > 0.20 && progressFraction < 0.75)
+        : _state.isGnssOutageSimulated;
 
-    // 3. Compute INS Dead Reckoning candidate
+    // Compute dead reckoned candidate with EKF heading
     LatLng deadReckonedPos = GeoUtils.computeDeadReckoningStep(
       _state.insPosition,
-      blendedHeading,
+      targetBearing,
       stepDistMeters,
     );
 
-    // If GNSS is lost, accumulate simulated lateral bias/drift in INS
-    double currentDriftIncrement = 0.02; // baseline drift
-    if (_state.isGnssOutageSimulated) {
-      currentDriftIncrement = 0.15; // accelerated drift per second
-      final double lateralNoiseM = (_random.nextDouble() - 0.5) * 0.4;
+    double currentDriftIncrement = 0.02;
+    if (isInSimulatedOutageZone) {
+      currentDriftIncrement = 0.12;
+      final double lateralNoiseM = (_random.nextDouble() - 0.5) * 0.3;
       deadReckonedPos = GeoUtils.computeDeadReckoningStep(
         deadReckonedPos,
-        (blendedHeading + 90.0) % 360,
+        (targetBearing + 90.0) % 360,
         lateralNoiseM,
       );
     }
 
-    // 4. Update GNSS Candidate
+    // GNSS Candidate
     LatLng gnssCandidate;
-    if (_state.isGnssOutageSimulated) {
-      // In outage, GNSS position freezes or wanders wildly with extreme multipath
-      final double gnssWander = (_random.nextDouble() - 0.5) * 4.0;
-      gnssCandidate = GeoUtils.computeDeadReckoningStep(_state.gnssPosition, _random.nextDouble() * 360, gnssWander);
+    if (isInSimulatedOutageZone) {
+      // In outage, GNSS freezes or drifts away
+      gnssCandidate = _state.gnssPosition;
     } else {
-      // Clean GNSS with minor 0.5m gaussian noise
-      final double gnssNoise = (_random.nextDouble() - 0.5) * 0.6;
+      // Clean GNSS tracking ground truth
+      final double gnssNoise = (_random.nextDouble() - 0.5) * 0.4;
       gnssCandidate = GeoUtils.computeDeadReckoningStep(nextGroundTruth, 90.0, gnssNoise);
-      locationService.updatePosition(gnssCandidate);
     }
 
-    // 5. Extended Kalman Filter Fusion
+    final imuSample = IMUSample(
+      timestamp: DateTime.now().millisecondsSinceEpoch / 1000.0,
+      accelX: 0.1,
+      accelY: 0.05,
+      gyroZ: (_random.nextDouble() - 0.5) * 0.05,
+    );
+
     _latestFusionSnapshot = fusionService.computeFusion(
       gnssPosition: gnssCandidate,
       deadReckonedPosition: deadReckonedPos,
-      isGnssValid: !_state.isGnssOutageSimulated,
+      isGnssValid: !isInSimulatedOutageZone,
       insDriftMeters: currentDriftIncrement,
-      gnssAccuracy: locationService.gnssAccuracyMeters,
+      gnssAccuracy: isInSimulatedOutageZone ? 50.0 : 1.8,
       dt: dt,
+      imuSample: imuSample,
+      aiForwardSpeedMs: simSpeedMs,
+      aiConfidence: 0.95,
+      vibrationScore: 0.05,
     );
 
-    // 6. Map Matching (Snap to road centerline)
     final LatLng snappedPos = mapMatchingService.matchToRoute(_latestFusionSnapshot.fusedPosition, route);
 
-    // 7. Update Historical Trail lists
     final updatedHistory = List<LatLng>.from(_state.historicalTrail);
     final updatedGnssTrail = List<LatLng>.from(_state.gnssTrail);
     final updatedInsTrail = List<LatLng>.from(_state.insTrail);
@@ -171,29 +292,34 @@ class NavigationService extends ChangeNotifier implements INavigationService {
     updatedGnssTrail.add(gnssCandidate);
     updatedInsTrail.add(deadReckonedPos);
 
-    // 8. Update rolling telemetry histories for charts
-    _updateTelemetryBuffers(speedMs, _latestSpeedEstimate.confidenceScore, _latestFusionSnapshot);
+    _updateTelemetryBuffers(simSpeedMs, 0.95, _latestFusionSnapshot);
 
-    // 9. Update State
     _state = _state.copyWith(
       currentPosition: _latestFusionSnapshot.fusedPosition,
       gnssPosition: gnssCandidate,
       insPosition: deadReckonedPos,
       snappedPosition: snappedPos,
-      currentSpeedMs: speedMs,
-      currentHeadingDeg: blendedHeading,
+      currentSpeedMs: simSpeedMs,
+      currentHeadingDeg: targetBearing,
       driftEstimateMeters: _latestFusionSnapshot.estimatedDriftMeters,
-      positionAccuracyMeters: _state.isGnssOutageSimulated ? _latestFusionSnapshot.estimatedDriftMeters + 1.2 : 1.8,
+      positionAccuracyMeters: isInSimulatedOutageZone ? _latestFusionSnapshot.estimatedDriftMeters + 1.2 : 1.8,
       navMode: _latestFusionSnapshot.activeMode,
-      gnssHealth: _state.isGnssOutageSimulated ? SignalHealth.lost : SignalHealth.excellent,
-      insHealth: SignalHealth.excellent,
-      fusionHealth: _state.isGnssOutageSimulated ? SignalHealth.degraded : SignalHealth.excellent,
+      gnssHealth: isInSimulatedOutageZone ? SignalHealth.lost : SignalHealth.excellent,
+      isGnssOutageSimulated: isInSimulatedOutageZone,
       historicalTrail: updatedHistory,
       gnssTrail: updatedGnssTrail,
       insTrail: updatedInsTrail,
     );
 
     notifyListeners();
+  }
+
+  double _calculateRouteDistance(List<LatLng> polyline) {
+    double total = 0.0;
+    for (int i = 0; i < polyline.length - 1; i++) {
+      total += GeoUtils.calculateDistance(polyline[i], polyline[i + 1]);
+    }
+    return total;
   }
 
   LatLng _advanceAlongPolyline(List<LatLng> polyline, double distMeters) {
@@ -214,14 +340,14 @@ class NavigationService extends ChangeNotifier implements INavigationService {
       accumulated += segmentLen;
     }
 
-    // Loop back to start if end of route reached
+    // Finished scenario run, loop cleanly
     _routeProgress = 0.0;
     return polyline.first;
   }
 
   void _updateTelemetryBuffers(double speed, double confidence, FusionSnapshot fusion) {
-    _speedHistory.add(speed * 3.6); // in km/h
-    _confidenceHistory.add(confidence * 100); // percentage
+    _speedHistory.add(speed * 3.6);
+    _confidenceHistory.add(confidence * 100);
     _driftHistory.add(fusion.estimatedDriftMeters);
     _gnssErrorHistory.add(fusion.gnssAccuracyMeters);
     _fusedErrorHistory.add(fusion.estimatedDriftMeters * 0.4);
@@ -254,7 +380,7 @@ class NavigationService extends ChangeNotifier implements INavigationService {
       navMode: NavMode.fusedEkf,
       insPosition: _state.snappedPosition,
       currentPosition: _state.snappedPosition,
-      driftEstimateMeters: 0.12,
+      driftEstimateMeters: 0.0,
     );
     notifyListeners();
   }
@@ -272,28 +398,71 @@ class NavigationService extends ChangeNotifier implements INavigationService {
     fusionService.resetFilter(selected.waypoints.first);
 
     _state = NavigationState.initial(selected.waypoints).copyWith(
+      isSimulationActive: true,
       activeRoute: selected.waypoints,
       currentPosition: selected.waypoints.first,
       gnssPosition: selected.waypoints.first,
       insPosition: selected.waypoints.first,
       snappedPosition: selected.waypoints.first,
+      currentSpeedMs: 12.5,
+      isGnssOutageSimulated: false,
     );
 
     notifyListeners();
   }
 
+  void startSimulation(SimulationScenario scenario) {
+    switchScenario(scenario.type.name);
+  }
+
+  void stopSimulation() {
+    final realPos = locationService.currentGnssPosition;
+    _state = _state.copyWith(
+      isSimulationActive: false,
+      activeRoute: const [],
+      isGnssOutageSimulated: false,
+      currentPosition: realPos,
+      gnssPosition: realPos,
+      insPosition: realPos,
+      snappedPosition: realPos,
+      currentSpeedMs: 0.0,
+      driftEstimateMeters: 0.0,
+      historicalTrail: [realPos],
+      gnssTrail: [realPos],
+      insTrail: [realPos],
+    );
+    locationService.restoreGnss();
+    fusionService.resetFilter(realPos);
+    notifyListeners();
+  }
+
   @override
   void toggleSimulation(bool running) {
-    _state = _state.copyWith(isSimulationActive: running);
-    notifyListeners();
+    if (!running) {
+      stopSimulation();
+    } else {
+      startSimulation(_currentScenario);
+    }
   }
 
   @override
   void resetNavigation() {
     _routeProgress = 0.0;
-    final firstPoint = _state.activeRoute.isNotEmpty ? _state.activeRoute.first : const LatLng(28.6139, 77.2090);
-    fusionService.resetFilter(firstPoint);
-    _state = NavigationState.initial(_state.activeRoute);
+    if (_state.isSimulationActive) {
+      final firstPoint = _state.activeRoute.isNotEmpty ? _state.activeRoute.first : const LatLng(28.6139, 77.2090);
+      fusionService.resetFilter(firstPoint);
+      _state = NavigationState.initial(_state.activeRoute).copyWith(isSimulationActive: true);
+    } else {
+      final realPos = locationService.currentGnssPosition;
+      fusionService.resetFilter(realPos);
+      _state = NavigationState.initial().copyWith(
+        currentPosition: realPos,
+        gnssPosition: realPos,
+        insPosition: realPos,
+        snappedPosition: realPos,
+        isSimulationActive: false,
+      );
+    }
     _speedHistory.clear();
     _confidenceHistory.clear();
     _driftHistory.clear();
@@ -306,6 +475,7 @@ class NavigationService extends ChangeNotifier implements INavigationService {
   void dispose() {
     _navigationTimer?.cancel();
     _sensorSubscription?.cancel();
+    _locationSubscription?.cancel();
     sensorService.dispose();
     locationService.dispose();
     super.dispose();

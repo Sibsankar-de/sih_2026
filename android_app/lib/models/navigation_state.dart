@@ -50,23 +50,23 @@ class NavigationState {
     required this.currentWaypointIndex,
   });
 
-  factory NavigationState.initial(List<LatLng> initialRoute) {
+  factory NavigationState.initial([List<LatLng> initialRoute = const []]) {
     final startPos = initialRoute.isNotEmpty ? initialRoute.first : const LatLng(28.6139, 77.2090);
     return NavigationState(
       currentPosition: startPos,
       gnssPosition: startPos,
       insPosition: startPos,
       snappedPosition: startPos,
-      currentSpeedMs: 11.2, // ~40 km/h
-      currentHeadingDeg: 42.0,
-      driftEstimateMeters: 0.15,
+      currentSpeedMs: 0.0,
+      currentHeadingDeg: 0.0,
+      driftEstimateMeters: 0.0,
       positionAccuracyMeters: 1.8,
       navMode: NavMode.fusedEkf,
       gnssHealth: SignalHealth.excellent,
       insHealth: SignalHealth.excellent,
       fusionHealth: SignalHealth.excellent,
       isGnssOutageSimulated: false,
-      isSimulationActive: true,
+      isSimulationActive: false,
       activeRoute: initialRoute,
       historicalTrail: [startPos],
       gnssTrail: [startPos],

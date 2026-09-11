@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/nav_drawer.dart';
 
@@ -27,10 +28,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.primaryBlueLight : AppColors.primaryBlue;
 
     return Scaffold(
       appBar: const CustomAppBar(title: 'Settings'),
       drawer: const NavDrawer(currentRoute: '/settings'),
+      bottomNavigationBar: const AppBottomNav(currentRoute: '/settings'),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -41,13 +44,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             children: [
               ListTile(
-                title: const Text('Theme Mode', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text('Theme Mode', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   widget.currentThemeMode == ThemeMode.system
                       ? 'System Adaptive'
                       : widget.currentThemeMode == ThemeMode.dark
-                          ? 'Cyber Dark Theme'
-                          : 'Clean Light Theme',
+                          ? 'Automotive Dark'
+                          : 'Clean Light',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
@@ -80,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Unit Preferences
           _buildSettingsSection(
@@ -89,13 +92,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             children: [
               SwitchListTile(
-                title: const Text('Metric Speed (km/h)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text('Metric Speed (km/h)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   _useKmh ? 'Displaying speeds in km/h' : 'Displaying speeds in m/s',
                   style: TextStyle(fontSize: 12, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
                 ),
                 value: _useKmh,
-                activeColor: AppColors.primaryBlue,
                 onChanged: (val) {
                   setState(() {
                     _useKmh = val;
@@ -104,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Map & Navigation Settings
           _buildSettingsSection(
@@ -113,13 +115,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDark: isDark,
             children: [
               SwitchListTile(
-                title: const Text('Show GNSS Ghost Trajectory', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text('Show Raw GNSS Ghost Path', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   'Displays unfiltered / multipath GNSS ghost position during outages',
                   style: TextStyle(fontSize: 12, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
                 ),
                 value: _showGhostTrajectory,
-                activeColor: AppColors.primaryBlue,
                 onChanged: (val) {
                   setState(() {
                     _showGhostTrajectory = val;
@@ -127,20 +128,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               ListTile(
-                title: const Text('Map Provider', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                title: const Text('Map Provider', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   'OpenStreetMap (OSM Standard Tiles)',
                   style: TextStyle(fontSize: 12, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
                 ),
-                trailing: const Icon(Icons.check_circle_rounded, color: AppColors.statusGreen, size: 20),
+                trailing: const Icon(Icons.check_circle_rounded, color: AppColors.statusGreen, size: 18),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Simulation Tuning
           _buildSettingsSection(
-            title: 'Dead Reckoning & Simulation Tuning',
+            title: 'Dead Reckoning & EKF Tuning',
             icon: Icons.tune_rounded,
             isDark: isDark,
             children: [
@@ -153,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Simulation Speed Multiplier', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                        Text('${_simulationMultiplier.toStringAsFixed(1)}x', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryBlue)),
+                        Text('${_simulationMultiplier.toStringAsFixed(1)}x', style: TextStyle(fontWeight: FontWeight.w700, color: primaryColor)),
                       ],
                     ),
                     Slider(
@@ -161,7 +162,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       min: 0.5,
                       max: 3.0,
                       divisions: 5,
-                      activeColor: AppColors.primaryBlue,
                       onChanged: (val) {
                         setState(() {
                           _simulationMultiplier = val;
@@ -188,7 +188,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       min: 1.0,
                       max: 10.0,
                       divisions: 9,
-                      activeColor: AppColors.statusYellow,
                       onChanged: (val) {
                         setState(() {
                           _driftTolerance = val;
@@ -200,34 +199,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // About App Section
           _buildSettingsSection(
-            title: 'About Application',
+            title: 'About ${AppConstants.appName}',
             icon: Icons.info_outline_rounded,
             isDark: isDark,
             children: [
               ListTile(
-                title: Text(AppConstants.appName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                title: const Text(AppConstants.appName, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                 subtitle: const Text(
-                  'SIH 2026 Problem SIH26168\nAI-ML Based Intelligent Dead Reckoning System',
+                  'AI-ML Based Intelligent Dead Reckoning System',
                   style: TextStyle(fontSize: 12, height: 1.4),
                 ),
                 trailing: Text(
-                  AppConstants.appVersion.split(' ').first,
-                  style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w700),
+                  AppConstants.appVersion,
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.w700),
                 ),
               ),
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Designed for mission-critical offline navigation in GNSS-denied environments. Powered by Flutter, OpenStreetMap, sensors_plus, and tightly-coupled EKF sensor fusion architecture.',
+                  'Autonomous multi-model edge AI inference pipeline (Velocity CNN-GRU, Road Vibration 1D-CNN, Motion State Classifier) tightly coupled with an 8-state Extended Kalman Filter (EKF) with Local Tangent Plane (ENU) mechanization, Non-Holonomic Constraints (NHC), and Zero Velocity Updates (ZUPT).',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    height: 1.4,
+                    height: 1.45,
                   ),
                 ),
               ),
@@ -245,25 +244,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required List<Widget> children,
     required bool isDark,
   }) {
+    final borderColor = isDark ? AppColors.cardBorder : AppColors.lightBorder;
+    final cardBg = isDark ? AppColors.darkCard : AppColors.lightCard;
+    final primaryColor = isDark ? AppColors.primaryBlueLight : AppColors.primaryBlue;
+
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.lightCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? AppColors.cardBorder : AppColors.lightBorder),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
               children: [
-                Icon(icon, size: 18, color: AppColors.primaryBlue),
+                Icon(icon, size: 17, color: primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   ),

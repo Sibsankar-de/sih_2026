@@ -2,6 +2,9 @@ import 'package:latlong2/latlong.dart';
 import '../../models/sensor_data.dart';
 import '../../models/speed_estimate.dart';
 import '../../models/fusion_data.dart';
+import '../ai/ai_inference_engine.dart';
+import '../fusion/fusion_engine.dart';
+import '../fusion/fusion_types.dart';
 
 abstract class ISensorService {
   Stream<SensorSnapshot> get sensorStream;
@@ -29,7 +32,10 @@ abstract class IMockAIService {
   SpeedEstimate estimateSpeed(SensorSnapshot sensorSnapshot, double previousSpeed);
   double estimateHeadingCorrection(Vector3D gyro, double currentHeading, double dt);
   bool detectZeroVelocity(Vector3D accel, Vector3D gyro);
+  AIInferenceEngine get inferenceEngine;
 }
+
+typedef IAIService = IMockAIService;
 
 abstract class IFusionService {
   FusionSnapshot computeFusion({
@@ -39,8 +45,14 @@ abstract class IFusionService {
     required double insDriftMeters,
     required double gnssAccuracy,
     required double dt,
+    IMUSample? imuSample,
+    double? aiForwardSpeedMs,
+    double? aiConfidence,
+    double? vibrationScore,
   });
+
   void resetFilter(LatLng resetPosition);
+  FusionEngine get fusionEngine;
 }
 
 abstract class IMapMatchingService {

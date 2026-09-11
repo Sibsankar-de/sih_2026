@@ -1,5 +1,5 @@
 name: fineline_navigator
-description: "AI-ML Based Intelligent Dead Reckoning System for Seamless Navigation - SIH2026 Problem SIH26168"
+description: "Fine Line - AI-ML Based Intelligent Dead Reckoning System for Seamless Navigation"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -19,6 +19,7 @@ dependencies:
   shared_preferences: ^2.5.2
   flutter_animate: ^4.5.2
   intl: ^0.20.2
+  geolocator: ^14.0.3
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +28,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/models/
+    - assets/configs/
+    - assets/datasets/

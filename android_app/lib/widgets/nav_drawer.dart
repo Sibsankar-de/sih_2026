@@ -15,41 +15,36 @@ class NavDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final drawerBg = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final selectedColor = AppColors.primaryBlue;
+    final selectedColor = isDark ? AppColors.primaryBlueLight : AppColors.primaryBlue;
 
     return Drawer(
       backgroundColor: drawerBg,
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: isDark
-                    ? [const Color(0xFF0D1B44), const Color(0xFF070D1E)]
-                    : [const Color(0xFFE0F2FE), const Color(0xFFBAE6FD)],
-              ),
+              color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
               border: Border(
                 bottom: BorderSide(
                   color: isDark ? AppColors.cardBorder : AppColors.lightBorder,
+                  width: 1,
                 ),
               ),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primaryBlue, width: 1.5),
+                    color: selectedColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.navigation_rounded,
-                    color: AppColors.primaryBlue,
-                    size: 26,
+                    color: selectedColor,
+                    size: 24,
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -60,19 +55,19 @@ class NavDrawer extends StatelessWidget {
                       Text(
                         AppConstants.appName,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          letterSpacing: 0.2,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'SIH 2026 • SIH26168',
+                        'Intelligent Dead Reckoning',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primaryBlue,
+                          color: selectedColor,
                         ),
                       ),
                     ],
@@ -83,85 +78,53 @@ class NavDrawer extends StatelessWidget {
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               children: [
                 _buildDrawerItem(
                   context: context,
-                  icon: Icons.dashboard_outlined,
-                  title: 'Home Dashboard',
-                  route: '/',
-                  selected: currentRoute == '/',
-                  selectedColor: selectedColor,
-                  isDark: isDark,
-                ),
-                _buildDrawerItem(
-                  context: context,
                   icon: Icons.map_outlined,
-                  title: 'Live Navigation',
-                  route: '/navigation',
-                  selected: currentRoute == '/navigation',
+                  selectedIcon: Icons.map_rounded,
+                  title: 'Map Navigation',
+                  subtitle: 'Real-time location & tracking',
+                  route: '/',
+                  selected: currentRoute == '/' || currentRoute == '/navigation',
                   selectedColor: selectedColor,
                   isDark: isDark,
                 ),
                 _buildDrawerItem(
                   context: context,
-                  icon: Icons.sensors_outlined,
-                  title: 'Sensor Monitoring',
-                  route: '/sensors',
-                  selected: currentRoute == '/sensors',
-                  selectedColor: selectedColor,
-                  isDark: isDark,
-                ),
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.speed_outlined,
-                  title: 'AI Speed Estimation',
-                  route: '/ai-speed',
-                  selected: currentRoute == '/ai-speed',
-                  selectedColor: selectedColor,
-                  isDark: isDark,
-                ),
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.hub_outlined,
-                  title: 'GNSS + INS Fusion',
-                  route: '/fusion',
-                  selected: currentRoute == '/fusion',
+                  icon: Icons.analytics_outlined,
+                  selectedIcon: Icons.analytics_rounded,
+                  title: 'System Telemetry',
+                  subtitle: 'EKF 8-state, AI models & sensors',
+                  route: '/telemetry',
+                  selected: currentRoute == '/telemetry' || currentRoute == '/fusion',
                   selectedColor: selectedColor,
                   isDark: isDark,
                 ),
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.science_outlined,
-                  title: 'Simulation Center',
+                  selectedIcon: Icons.science_rounded,
+                  title: 'Simulations',
+                  subtitle: 'Tunnel, urban canyon & dataset',
                   route: '/simulation',
                   selected: currentRoute == '/simulation',
                   selectedColor: selectedColor,
                   isDark: isDark,
                 ),
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.account_tree_outlined,
-                  title: 'System Architecture',
-                  route: '/architecture',
-                  selected: currentRoute == '/architecture',
-                  selectedColor: selectedColor,
-                  isDark: isDark,
+                const SizedBox(height: 12),
+                Divider(
+                  height: 1,
+                  color: isDark ? AppColors.cardBorder : AppColors.lightBorder,
                 ),
-                _buildDrawerItem(
-                  context: context,
-                  icon: Icons.menu_book_outlined,
-                  title: 'Research & References',
-                  route: '/research',
-                  selected: currentRoute == '/research',
-                  selectedColor: selectedColor,
-                  isDark: isDark,
-                ),
-                const Divider(height: 20),
+                const SizedBox(height: 12),
                 _buildDrawerItem(
                   context: context,
                   icon: Icons.settings_outlined,
+                  selectedIcon: Icons.settings_rounded,
                   title: 'Settings',
+                  subtitle: 'Units, theme & preferences',
                   route: '/settings',
                   selected: currentRoute == '/settings',
                   selectedColor: selectedColor,
@@ -171,11 +134,12 @@ class NavDrawer extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
                   color: isDark ? AppColors.cardBorder : AppColors.lightBorder,
+                  width: 1,
                 ),
               ),
             ),
@@ -183,7 +147,7 @@ class NavDrawer extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'SIH 2026 Finalist Edition',
+                  'Autonomous Dead Reckoning',
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
@@ -191,10 +155,10 @@ class NavDrawer extends StatelessWidget {
                 ),
                 Text(
                   AppConstants.appVersion.split(' ').first,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primaryBlue,
+                    color: selectedColor,
                   ),
                 ),
               ],
@@ -208,38 +172,54 @@ class NavDrawer extends StatelessWidget {
   Widget _buildDrawerItem({
     required BuildContext context,
     required IconData icon,
+    required IconData selectedIcon,
     required String title,
+    required String subtitle,
     required String route,
     required bool selected,
     required Color selectedColor,
     required bool isDark,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    final textColor = selected
+        ? selectedColor
+        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
+    final subtitleColor = selected
+        ? selectedColor.withValues(alpha: 0.8)
+        : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight);
+    final iconColor = selected
+        ? selectedColor
+        : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: selected
+            ? selectedColor.withValues(alpha: 0.1)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: ListTile(
-        dense: true,
-        leading: Icon(
-          icon,
-          size: 20,
-          color: selected
-              ? selectedColor
-              : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        leading: Icon(selected ? selectedIcon : icon, color: iconColor, size: 22),
         title: Text(
           title,
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected
-                ? selectedColor
-                : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+            color: textColor,
           ),
         ),
-        selected: selected,
-        selectedTileColor: selectedColor.withOpacity(0.12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 11,
+            color: subtitleColor,
+          ),
+        ),
+        dense: true,
         onTap: () {
-          Navigator.pop(context); // Close drawer
+          Navigator.of(context).pop();
           if (!selected) {
             context.go(route);
           }
