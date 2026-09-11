@@ -42,7 +42,6 @@ ENV/
 Thumbs.db
 
 # Large Datasets
-datasets/
 *.zip
 *.tar.gz
 *.tar
