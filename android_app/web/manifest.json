@@ -1,0 +1,11 @@
+{
+  "name": "FineLine Navigator",
+  "short_name": "FineLine",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0A1128",
+  "theme_color": "#00D2FF",
+  "description": "AI-ML Based Intelligent Dead Reckoning System for Seamless Navigation",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}
